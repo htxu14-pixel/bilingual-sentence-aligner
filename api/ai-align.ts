@@ -1,13 +1,30 @@
 import { OpenAI } from 'openai';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const MODEL = 'gpt-4.1-mini';
+const MODEL = process.env.AI_MODEL || 'deepseek-chat';
 
 interface AlignmentRow {
   chinese: string;
   english: string;
   chineseIndexes: number[];
   englishIndexes: number[];
+}
+
+function extractJsonArray(text: string): string {
+  let cleaned = text.trim();
+  
+  cleaned = cleaned.replace(/^```json\s*/i, '');
+  cleaned = cleaned.replace(/^```\s*/, '');
+  cleaned = cleaned.replace(/\s*```$/, '');
+  
+  const firstBracket = cleaned.indexOf('[');
+  const lastBracket = cleaned.lastIndexOf(']');
+  
+  if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+    return cleaned.substring(firstBracket, lastBracket + 1);
+  }
+  
+  return cleaned;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -31,13 +48,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'Missing OPENAI_API_KEY' });
+    return res.status(500).json({ error: 'Missing DEEPSEEK_API_KEY' });
   }
 
   try {
-    const openai = new OpenAI({ apiKey });
+    const client = new OpenAI({
+      apiKey,
+      baseURL: 'https://api.deepseek.com/v1'
+    });
 
     const chineseText = chineseSegments
       .map((seg, idx) => `${idx + 1}. ${seg}`)
@@ -83,32 +103,42 @@ ${chineseText}
 English segments:
 ${englishText}`;
 
-    const response = await openai.chat.completions.create({
+    const response = await client.chat.completions.create({
       model: MODEL,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userContent }
       ],
-      temperature: 0.1,
-      max_tokens: 4000
+      temperature: 0.1
     });
 
     const content = response.choices[0]?.message?.content;
     if (!content) {
+      console.error('AI alignment error: Invalid API response, content is empty');
       return res.status(500).json({ error: 'Invalid API response' });
     }
 
-    const jsonString = content.trim();
+    const extractedJson = extractJsonArray(content);
 
     let alignmentResult: AlignmentRow[];
     try {
-      alignmentResult = JSON.parse(jsonString);
+      alignmentResult = JSON.parse(extractedJson);
     } catch {
-      return res.status(500).json({ error: 'Failed to parse AI alignment result' });
+      const rawPreview = content.substring(0, 500);
+      console.error('AI alignment error: Failed to parse AI alignment result', { raw: rawPreview });
+      return res.status(500).json({ 
+        error: 'Failed to parse AI alignment result',
+        raw: rawPreview
+      });
     }
 
     if (!Array.isArray(alignmentResult)) {
-      return res.status(500).json({ error: 'Failed to parse AI alignment result' });
+      const rawPreview = content.substring(0, 500);
+      console.error('AI alignment error: AI response is not an array', { raw: rawPreview });
+      return res.status(500).json({ 
+        error: 'Failed to parse AI alignment result',
+        raw: rawPreview
+      });
     }
 
     const usedChineseIndexes = new Set<number>();
@@ -157,6 +187,21 @@ ${englishText}`;
 
   } catch (error) {
     console.error('AI alignment error:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+      return res.status(401).json({ 
+        error: 'Invalid DeepSeek API key. Please check DEEPSEEK_API_KEY in Vercel.' 
+      });
+    }
+    
+    if (errorMessage.includes('429') || errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
+      return res.status(429).json({ 
+        error: 'DeepSeek rate limit or quota exceeded. Please check billing/quota or try again later.' 
+      });
+    }
+    
     return res.status(500).json({ error: 'AI alignment failed. Please try again.' });
   }
 }
