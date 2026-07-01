@@ -16,10 +16,6 @@ interface InputAreaProps {
   onClearAll: () => void;
   chineseCount: number;
   englishCount: number;
-  aiAligning: boolean;
-  aiAlignMessage: string;
-  onAiAlign: () => void;
-  hasAlignedData: boolean;
 }
 
 type UploadMode = 'separateFiles' | 'mixedFile';
@@ -66,10 +62,6 @@ export const InputArea: React.FC<InputAreaProps> = ({
   onClearAll,
   chineseCount,
   englishCount,
-  aiAligning,
-  aiAlignMessage,
-  onAiAlign,
-  hasAlignedData,
 }) => {
   const [uploadMode, setUploadMode] = useState<UploadMode>('separateFiles');
   const [chineseFileInfo, setChineseFileInfo] = useState<FileInfo | null>(null);
@@ -432,30 +424,13 @@ export const InputArea: React.FC<InputAreaProps> = ({
             {isMatched ? 'Matched' : 'Mismatched'}
           </span>
         </div>
-        <div className="flex gap-3 items-center">
-          <button
-            onClick={onAiAlign}
-            disabled={aiAligning || !hasAlignedData}
-            className={`btn-ai ${aiAligning || !hasAlignedData ? 'btn-disabled' : ''}`}
-          >
-            {aiAligning ? 'AI Aligning...' : 'AI Align'}
-          </button>
-          {aiAlignMessage && (
-            <span className={`text-sm px-3 py-1 rounded-full ${
-              aiAlignMessage.includes('completed') ? 'bg-green-100 text-green-700' : 
-              aiAlignMessage.includes('failed') ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-            }`}>
-              {aiAlignMessage}
-            </span>
-          )}
-          <button
-            onClick={handleSplitAndAlign}
-            disabled={!canSplitAndAlign()}
-            className={`btn-primary ${!canSplitAndAlign() ? 'btn-disabled' : ''}`}
-          >
-            Split & Align
-          </button>
-        </div>
+        <button
+          onClick={handleSplitAndAlign}
+          disabled={!canSplitAndAlign()}
+          className={`btn-primary ${!canSplitAndAlign() ? 'btn-disabled' : ''}`}
+        >
+          Split & Align
+        </button>
       </div>
     </div>
   );
