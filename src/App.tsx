@@ -26,6 +26,8 @@ function App() {
   const [alignedData, setAlignedData] = useState<ReturnType<typeof alignSentences>>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [hasChanges, setHasChanges] = useState(false);
+  const [aiAligning, setAiAligning] = useState(false);
+  const [aiAlignMessage, setAiAlignMessage] = useState('');
 
   const counts = useMemo(() => {
     let chineseCount = 0;
@@ -128,7 +130,67 @@ function App() {
     setInputMode('imported');
   };
 
-  
+  const handleAiAlign = async () => {
+    const confirmed = window.confirm(
+      'AI Align may regroup existing Chinese and English segments. It will not translate or rewrite them. Continue?'
+    );
+    
+    if (!confirmed) return;
+
+    setAiAligning(true);
+    setAiAlignMessage('');
+
+    try {
+      const chineseSegments = alignedData
+        .filter(d => d.chinese.trim())
+        .map(d => d.chinese.trim());
+
+      const englishSegments = alignedData
+        .filter(d => d.english.trim())
+        .map(d => d.english.trim());
+
+      if (chineseSegments.length === 0 || englishSegments.length === 0) {
+        setAiAlignMessage('Please provide both Chinese and English segments');
+        setAiAligning(false);
+        setTimeout(() => setAiAlignMessage(''), 3000);
+        return;
+      }
+
+      const totalSegments = chineseSegments.length + englishSegments.length;
+      if (totalSegments > 120) {
+        setAiAlignMessage('Too many segments. Please split into smaller parts.');
+        setAiAligning(false);
+        setTimeout(() => setAiAlignMessage(''), 3000);
+        return;
+      }
+
+      const response = await fetch('/api/ai-align', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          chineseSegments,
+          englishSegments
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.rows) {
+        setAlignedData(result.rows);
+        setAiAlignMessage('AI alignment completed');
+      } else {
+        setAiAlignMessage(result.error || 'AI alignment failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('AI alignment error:', error);
+      setAiAlignMessage('AI alignment failed. Please try again.');
+    } finally {
+      setAiAligning(false);
+      setTimeout(() => setAiAlignMessage(''), 3000);
+    }
+  };
 
   const handleGoToRow = useCallback((rowNumber: number) => {
     const rowIndex = rowNumber - 1;
@@ -183,6 +245,10 @@ function App() {
             onClearAll={handleClearAll}
             chineseCount={counts.chineseCount}
             englishCount={counts.englishCount}
+            aiAligning={aiAligning}
+            aiAlignMessage={aiAlignMessage}
+            onAiAlign={handleAiAlign}
+            hasAlignedData={alignedData.length > 0}
           />
 
           {alignedData.length > 0 && (

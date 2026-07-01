@@ -250,6 +250,37 @@ button:active {
   box-shadow: none !important;
 }
 
+.btn-ai {
+  padding: 11px 20px;
+  font-weight: 500;
+  border-radius: 18px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+  cursor: pointer;
+  border: 1px solid rgba(234, 179, 8, 0.18);
+  font-size: 14px;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.88)), 
+              radial-gradient(circle at 30% 15%, rgba(234, 179, 8, 0.18), transparent 34%);
+  backdrop-filter: blur(16px);
+  color: rgba(250, 204, 21, 0.95);
+  box-shadow: 
+    0 8px 18px rgba(15, 23, 42, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.btn-ai:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, rgba(45, 55, 72, 0.94), rgba(30, 41, 59, 0.90)), 
+              radial-gradient(circle at 30% 15%, rgba(234, 179, 8, 0.28), transparent 34%);
+  border-color: rgba(234, 179, 8, 0.38);
+  box-shadow: 
+    0 14px 28px rgba(15, 23, 42, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.btn-ai:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
 .mode-tabs {
   display: flex;
   gap: 4px;
