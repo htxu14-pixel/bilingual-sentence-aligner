@@ -482,8 +482,38 @@ button:active {
 }
 
 .table-row:hover {
-  background: #f8fbff;
+  background: rgba(248, 251, 255, 0.86);
   box-shadow: inset 3px 0 0 rgba(212, 175, 55, 0.4);
+}
+
+tr.selected-row td {
+  background: linear-gradient(
+    90deg,
+    rgba(212, 175, 55, 0.14) 0%,
+    rgba(248, 250, 252, 0.96) 18%,
+    rgba(239, 246, 255, 0.88) 100%
+  );
+  box-shadow: 
+    inset 4px 0 0 rgba(212, 175, 55, 0.72),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    0 8px 22px rgba(15, 23, 42, 0.06);
+}
+
+tr.selected-row:hover td {
+  background: linear-gradient(
+    90deg,
+    rgba(212, 175, 55, 0.18) 0%,
+    rgba(248, 250, 252, 0.98) 18%,
+    rgba(239, 246, 255, 0.94) 100%
+  );
+}
+
+tr.selected-row .action-btn {
+  opacity: 1;
+  filter: none;
+  box-shadow: 
+    0 6px 14px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .table-row-error {

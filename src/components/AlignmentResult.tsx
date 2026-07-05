@@ -82,6 +82,7 @@ export const AlignmentResult: React.FC<AlignmentResultProps> = ({ data, setData,
   const [validationErrors, setValidationErrors] = useState<number[]>([]);
   const [showValidation, setShowValidation] = useState(false);
   const [editingCell, setEditingCell] = useState<{ row: number; column: 'chinese' | 'english' } | null>(null);
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
 
   const handleEdit = (index: number, field: 'chinese' | 'english', value: string) => {
     const newData = [...data];
@@ -448,7 +449,8 @@ export const AlignmentResult: React.FC<AlignmentResultProps> = ({ data, setData,
                   return (
                     <tr 
                       key={item.id} 
-                      className={`table-row ${hasError ? 'table-row-error' : ''} ${isMatching ? 'table-row-match' : ''}`}
+                      onClick={() => setSelectedRowId(item.id)}
+                      className={`table-row ${hasError ? 'table-row-error' : ''} ${isMatching ? 'table-row-match' : ''} ${selectedRowId === item.id ? 'selected-row' : ''}`}
                     >
                       <td className={`table-cell ${hasError ? 'table-cell-error' : ''} ${isMatching ? 'font-bold' : ''}`}>
                         {index + 1}
@@ -457,7 +459,10 @@ export const AlignmentResult: React.FC<AlignmentResultProps> = ({ data, setData,
                         <textarea
                           value={item.chinese}
                           onChange={(e) => handleEdit(index, 'chinese', e.target.value)}
-                          onFocus={() => setEditingCell({ row: index, column: 'chinese' })}
+                          onFocus={() => {
+                            setEditingCell({ row: index, column: 'chinese' });
+                            setSelectedRowId(item.id);
+                          }}
                           onBlur={() => setEditingCell(null)}
                           className={`alignment-cell ${isEditingChinese ? 'alignment-cell-focus' : ''}`}
                           placeholder="Chinese text..."
@@ -467,7 +472,10 @@ export const AlignmentResult: React.FC<AlignmentResultProps> = ({ data, setData,
                         <textarea
                           value={item.english}
                           onChange={(e) => handleEdit(index, 'english', e.target.value)}
-                          onFocus={() => setEditingCell({ row: index, column: 'english' })}
+                          onFocus={() => {
+                            setEditingCell({ row: index, column: 'english' });
+                            setSelectedRowId(item.id);
+                          }}
                           onBlur={() => setEditingCell(null)}
                           className={`alignment-cell ${isEditingEnglish ? 'alignment-cell-focus' : ''}`}
                           placeholder="English text..."
