@@ -24,7 +24,19 @@ interface FileInfo {
   name: string;
   charCount: number;
   preview: string;
+  encoding: string;
 }
+
+type EncodingOption = 'auto' | 'utf-8' | 'gb18030' | 'gbk' | 'utf-16le' | 'utf-16be';
+
+const ENCODING_LABELS: Record<EncodingOption, string> = {
+  'auto': 'Auto',
+  'utf-8': 'UTF-8',
+  'gb18030': 'GB18030 / GBK',
+  'gbk': 'GBK',
+  'utf-16le': 'UTF-16LE',
+  'utf-16be': 'UTF-16BE',
+};
 
 const SAMPLE_CHINESE = `发展电动汽车
 应对气候变化
@@ -44,6 +56,101 @@ const removeBOM = (content: string): string => {
   }
   return content;
 };
+
+function scoreDecodedText(text: string): number {
+  const replacementCount = (text.match(/\uFFFD/g) || []).length;
+  const chineseCount = (text.match(/[\u4e00-\u9fff\u3400-\u4dbf\u20000-\u2a6df\u2a700-\u2b73f\u2b740-\u2b81f\u2b820-\u2ceaf\u2ceb0-\u2ebe0]/g) || []).length;
+  const asciiCount = (text.match(/[A-Za-z0-9]/g) || []).length;
+  const controlCount = (text.match(/[\x00-\x08\x0E-\x1F]/g) || []).length;
+  const newlineCount = (text.match(/[\r\n]/g) || []).length;
+  const textLength = text.length;
+
+  let score = 0;
+  
+  score += chineseCount * 3;
+  score += asciiCount * 0.2;
+  score -= replacementCount * 50;
+  score -= controlCount * 20;
+  score += newlineCount * 2;
+  
+  if (textLength > 0) {
+    const chineseRatio = chineseCount / textLength;
+    if (chineseRatio > 0.1) {
+      score += chineseRatio * 100;
+    }
+  }
+  
+  return score;
+}
+
+function decodeTextFile(arrayBuffer: ArrayBuffer, preferredEncoding?: EncodingOption): { text: string; encoding: string } {
+  const bytes = new Uint8Array(arrayBuffer);
+  
+  const checkBOM = (): string | null => {
+    if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+      return 'utf-8';
+    }
+    if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) {
+      return 'utf-16le';
+    }
+    if (bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) {
+      return 'utf-16be';
+    }
+    return null;
+  };
+  
+  const bomEncoding = checkBOM();
+  if (bomEncoding) {
+    try {
+      const decoder = new TextDecoder(bomEncoding);
+      return {
+        text: removeBOM(decoder.decode(arrayBuffer)),
+        encoding: bomEncoding.toUpperCase()
+      };
+    } catch {
+    }
+  }
+  
+  if (preferredEncoding && preferredEncoding !== 'auto') {
+    try {
+      const decoder = new TextDecoder(preferredEncoding);
+      return {
+        text: removeBOM(decoder.decode(arrayBuffer)),
+        encoding: preferredEncoding.toUpperCase()
+      };
+    } catch {
+    }
+  }
+  
+  const encodings = ['utf-8', 'gb18030', 'gbk', 'utf-16le', 'utf-16be'];
+  let bestResult: { text: string; encoding: string; score: number } | null = null;
+  
+  for (const encoding of encodings) {
+    try {
+      const decoder = new TextDecoder(encoding, { fatal: false });
+      const text = removeBOM(decoder.decode(arrayBuffer));
+      const score = scoreDecodedText(text);
+      
+      if (!bestResult || score > bestResult.score) {
+        bestResult = { text, encoding, score };
+      }
+    } catch {
+      continue;
+    }
+  }
+  
+  if (bestResult) {
+    return {
+      text: bestResult.text,
+      encoding: bestResult.encoding.toUpperCase()
+    };
+  }
+  
+  return {
+    text: '',
+    encoding: 'Unknown'
+  };
+}
 
 const getFilePreview = (content: string): string => {
   return content;
@@ -67,6 +174,10 @@ export const InputArea: React.FC<InputAreaProps> = ({
   const [chineseFileInfo, setChineseFileInfo] = useState<FileInfo | null>(null);
   const [englishFileInfo, setEnglishFileInfo] = useState<FileInfo | null>(null);
   const [mixedFileInfo, setMixedFileInfo] = useState<FileInfo | null>(null);
+  
+  const [chineseEncoding, setChineseEncoding] = useState<EncodingOption>('auto');
+  const [englishEncoding, setEnglishEncoding] = useState<EncodingOption>('auto');
+  const [mixedEncoding, setMixedEncoding] = useState<EncodingOption>('auto');
 
   const chineseFileRef = useRef<HTMLInputElement>(null);
   const englishFileRef = useRef<HTMLInputElement>(null);
@@ -83,15 +194,16 @@ export const InputArea: React.FC<InputAreaProps> = ({
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        const content = removeBOM(event.target?.result as string);
-        setChineseText(content);
+        const { text, encoding } = decodeTextFile(event.target?.result as ArrayBuffer, chineseEncoding);
+        setChineseText(text);
         setChineseFileInfo({
           name: file.name,
-          charCount: content.length,
-          preview: getFilePreview(content),
+          charCount: text.length,
+          preview: getFilePreview(text),
+          encoding,
         });
       };
-      reader.readAsText(file, 'UTF-8');
+      reader.readAsArrayBuffer(file);
     }
     e.target.value = '';
   };
@@ -101,15 +213,16 @@ export const InputArea: React.FC<InputAreaProps> = ({
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        const content = removeBOM(event.target?.result as string);
-        setEnglishText(content);
+        const { text, encoding } = decodeTextFile(event.target?.result as ArrayBuffer, englishEncoding);
+        setEnglishText(text);
         setEnglishFileInfo({
           name: file.name,
-          charCount: content.length,
-          preview: getFilePreview(content),
+          charCount: text.length,
+          preview: getFilePreview(text),
+          encoding,
         });
       };
-      reader.readAsText(file, 'UTF-8');
+      reader.readAsArrayBuffer(file);
     }
     e.target.value = '';
   };
@@ -119,15 +232,16 @@ export const InputArea: React.FC<InputAreaProps> = ({
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        const content = removeBOM(event.target?.result as string);
-        setMixedText(content);
+        const { text, encoding } = decodeTextFile(event.target?.result as ArrayBuffer, mixedEncoding);
+        setMixedText(text);
         setMixedFileInfo({
           name: file.name,
-          charCount: content.length,
-          preview: getFilePreview(content),
+          charCount: text.length,
+          preview: getFilePreview(text),
+          encoding,
         });
       };
-      reader.readAsText(file, 'UTF-8');
+      reader.readAsArrayBuffer(file);
     }
     e.target.value = '';
   };
@@ -187,6 +301,9 @@ export const InputArea: React.FC<InputAreaProps> = ({
     setChineseFileInfo(null);
     setEnglishFileInfo(null);
     setMixedFileInfo(null);
+    setChineseEncoding('auto');
+    setEnglishEncoding('auto');
+    setMixedEncoding('auto');
   };
 
   const isMatched = chineseCount === englishCount;
@@ -321,7 +438,20 @@ export const InputArea: React.FC<InputAreaProps> = ({
           {uploadMode === 'separateFiles' && (
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Chinese File</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">Chinese File</label>
+                  <select
+                    value={chineseEncoding}
+                    onChange={(e) => setChineseEncoding(e.target.value as EncodingOption)}
+                    className="text-sm border border-gray-300 rounded-lg px-3 py-1 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    {(Object.keys(ENCODING_LABELS) as EncodingOption[]).map((key) => (
+                      <option key={key} value={key}>
+                        {ENCODING_LABELS[key]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <input
                   ref={chineseFileRef}
                   type="file"
@@ -342,6 +472,9 @@ export const InputArea: React.FC<InputAreaProps> = ({
                       <span className="file-name">{chineseFileInfo.name}</span>
                       <span className="file-char-count">{chineseFileInfo.charCount} characters</span>
                     </div>
+                    <div className="file-info-meta">
+                      <span className="file-encoding">Encoding: {chineseFileInfo.encoding}</span>
+                    </div>
                     <div className="file-preview-text">
                       {chineseFileInfo.preview}
                     </div>
@@ -349,7 +482,20 @@ export const InputArea: React.FC<InputAreaProps> = ({
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">English File</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">English File</label>
+                  <select
+                    value={englishEncoding}
+                    onChange={(e) => setEnglishEncoding(e.target.value as EncodingOption)}
+                    className="text-sm border border-gray-300 rounded-lg px-3 py-1 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    {(Object.keys(ENCODING_LABELS) as EncodingOption[]).map((key) => (
+                      <option key={key} value={key}>
+                        {ENCODING_LABELS[key]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <input
                   ref={englishFileRef}
                   type="file"
@@ -370,6 +516,9 @@ export const InputArea: React.FC<InputAreaProps> = ({
                       <span className="file-name">{englishFileInfo.name}</span>
                       <span className="file-char-count">{englishFileInfo.charCount} characters</span>
                     </div>
+                    <div className="file-info-meta">
+                      <span className="file-encoding">Encoding: {englishFileInfo.encoding}</span>
+                    </div>
                     <div className="file-preview-text">
                       {englishFileInfo.preview}
                     </div>
@@ -381,7 +530,20 @@ export const InputArea: React.FC<InputAreaProps> = ({
 
           {uploadMode === 'mixedFile' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Mixed Bilingual File</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">Mixed Bilingual File</label>
+                <select
+                  value={mixedEncoding}
+                  onChange={(e) => setMixedEncoding(e.target.value as EncodingOption)}
+                  className="text-sm border border-gray-300 rounded-lg px-3 py-1 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {(Object.keys(ENCODING_LABELS) as EncodingOption[]).map((key) => (
+                    <option key={key} value={key}>
+                      {ENCODING_LABELS[key]}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <input
                 ref={mixedFileRef}
                 type="file"
@@ -401,6 +563,9 @@ export const InputArea: React.FC<InputAreaProps> = ({
                   <div className="file-info-header">
                     <span className="file-name">{mixedFileInfo.name}</span>
                     <span className="file-char-count">{mixedFileInfo.charCount} characters</span>
+                  </div>
+                  <div className="file-info-meta">
+                    <span className="file-encoding">Encoding: {mixedFileInfo.encoding}</span>
                   </div>
                   <div className="file-preview-text">
                     {mixedFileInfo.preview}
