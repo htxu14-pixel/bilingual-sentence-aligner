@@ -656,6 +656,52 @@ button:active {
 .table-container-wrapper {
   overflow: hidden;
   border-radius: 20px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.table-scroll-area {
+  max-height: min(58vh, 600px);
+  overflow-y: auto;
+  overflow-x: auto;
+  border-radius: 20px;
+}
+
+.sticky-header-container {
+  position: relative;
+}
+
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.sticky-header th {
+  position: sticky;
+  top: 0;
+  z-index: 11;
+  background: rgba(248, 250, 252, 0.98);
+  backdrop-filter: blur(12px);
+}
+
+.table-scroll-area::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.table-scroll-area::-webkit-scrollbar-track {
+  background: rgba(241, 245, 249, 0.8);
+  border-radius: 4px;
+}
+
+.table-scroll-area::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.6);
+  border-radius: 4px;
+}
+
+.table-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.7);
 }
 
 .highlight-row {

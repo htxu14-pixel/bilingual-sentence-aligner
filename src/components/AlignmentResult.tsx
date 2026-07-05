@@ -427,159 +427,161 @@ export const AlignmentResult: React.FC<AlignmentResultProps> = ({ data, setData,
       </div>
 
       <div className="table-container-wrapper">
-        <div className="overflow-x-auto sticky-header-container">
-          <table className="w-full border-collapse table-container">
-          <thead className="sticky-header">
-            <tr>
-              <th className="table-header">No.</th>
-              <th className="table-header">Chinese</th>
-              <th className="table-header">English</th>
-              <th className="table-header">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((item, index) => {
-              const hasError = showValidation && validationErrors.includes(index);
-              const isMatching = isMatch(item);
-              const isEditingChinese = editingCell?.row === index && editingCell?.column === 'chinese';
-              const isEditingEnglish = editingCell?.row === index && editingCell?.column === 'english';
-              
-              return (
-                <tr 
-                  key={item.id} 
-                  className={`table-row ${hasError ? 'table-row-error' : ''} ${isMatching ? 'table-row-match' : ''}`}
-                >
-                  <td className={`table-cell ${hasError ? 'table-cell-error' : ''} ${isMatching ? 'font-bold' : ''}`}>
-                    {index + 1}
-                  </td>
-                  <td className={`table-cell ${hasError && !item.chinese.trim() ? 'table-cell-error' : ''}`}>
-                    <textarea
-                      value={item.chinese}
-                      onChange={(e) => handleEdit(index, 'chinese', e.target.value)}
-                      onFocus={() => setEditingCell({ row: index, column: 'chinese' })}
-                      onBlur={() => setEditingCell(null)}
-                      className={`alignment-cell ${isEditingChinese ? 'alignment-cell-focus' : ''}`}
-                      placeholder="Chinese text..."
-                    />
-                  </td>
-                  <td className={`table-cell ${hasError && !item.english.trim() ? 'table-cell-error' : ''}`}>
-                    <textarea
-                      value={item.english}
-                      onChange={(e) => handleEdit(index, 'english', e.target.value)}
-                      onFocus={() => setEditingCell({ row: index, column: 'english' })}
-                      onBlur={() => setEditingCell(null)}
-                      className={`alignment-cell ${isEditingEnglish ? 'alignment-cell-focus' : ''}`}
-                      placeholder="English text..."
-                    />
-                  </td>
-                  <td className="table-cell">
-                    <div className="flex flex-wrap gap-1">
-                      <button
-                        onClick={() => handleAddRowAbove(index)}
-                        className="action-btn action-btn-gray"
-                        title="Add row above"
-                      >
-                        ↑+
-                      </button>
-                      <button
-                        onClick={() => handleAddRowBelow(index)}
-                        className="action-btn action-btn-gray"
-                        title="Add row below"
-                      >
-                        ↓+
-                      </button>
-                      <button
-                        onClick={() => handleDeleteRow(index)}
-                        className="action-btn action-btn-danger"
-                        title="Delete row"
-                      >
-                        ✕
-                      </button>
-                      <button
-                        onClick={() => handleMoveUp(index)}
-                        disabled={index === 0}
-                        className={`action-btn ${index === 0 ? 'action-btn-disabled' : 'action-btn-blue'}`}
-                        title="Move up"
-                      >
-                        ↑
-                      </button>
-                      <button
-                        onClick={() => handleMoveDown(index)}
-                        disabled={index === data.length - 1}
-                        className={`action-btn ${index === data.length - 1 ? 'action-btn-disabled' : 'action-btn-blue'}`}
-                        title="Move down"
-                      >
-                        ↓
-                      </button>
-                      <button
-                        onClick={() => handleMergeWithPrevious(index)}
-                        disabled={index === 0}
-                        className={`action-btn ${index === 0 ? 'action-btn-disabled' : 'action-btn-purple'}`}
-                        title="Merge entire row with previous"
-                      >
-                        Row ↑
-                      </button>
-                      <button
-                        onClick={() => handleMergeWithNext(index)}
-                        disabled={index === data.length - 1}
-                        className={`action-btn ${index === data.length - 1 ? 'action-btn-disabled' : 'action-btn-purple'}`}
-                        title="Merge entire row with next"
-                      >
-                        Row ↓
-                      </button>
-                      <button
-                        onClick={() => handleMergeChineseUp(index)}
-                        disabled={index === 0}
-                        className={`action-btn ${index === 0 ? 'action-btn-disabled' : 'action-btn-cyan'}`}
-                        title="Merge Chinese Up"
-                      >
-                        C↑
-                      </button>
-                      <button
-                        onClick={() => handleMergeChineseDown(index)}
-                        disabled={index === data.length - 1}
-                        className={`action-btn ${index === data.length - 1 ? 'action-btn-disabled' : 'action-btn-cyan'}`}
-                        title="Merge Chinese Down"
-                      >
-                        C↓
-                      </button>
-                      <button
-                        onClick={() => handleMergeEnglishUp(index)}
-                        disabled={index === 0}
-                        className={`action-btn ${index === 0 ? 'action-btn-disabled' : 'action-btn-amber'}`}
-                        title="Merge English Up"
-                      >
-                        E↑
-                      </button>
-                      <button
-                        onClick={() => handleMergeEnglishDown(index)}
-                        disabled={index === data.length - 1}
-                        className={`action-btn ${index === data.length - 1 ? 'action-btn-disabled' : 'action-btn-amber'}`}
-                        title="Merge English Down"
-                      >
-                        E↓
-                      </button>
-                      <button
-                        onClick={() => handleSplitChinese(index)}
-                        className="action-btn action-btn-green"
-                        title="Split Chinese"
-                      >
-                        Split C
-                      </button>
-                      <button
-                        onClick={() => handleSplitEnglish(index)}
-                        className="action-btn action-btn-green"
-                        title="Split English"
-                      >
-                        Split E
-                      </button>
-                    </div>
-                  </td>
+        <div className="table-scroll-area">
+          <div className="sticky-header-container">
+            <table className="w-full border-collapse table-container">
+              <thead className="sticky-header">
+                <tr>
+                  <th className="table-header">No.</th>
+                  <th className="table-header">Chinese</th>
+                  <th className="table-header">English</th>
+                  <th className="table-header">Actions</th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                {data.map((item, index) => {
+                  const hasError = showValidation && validationErrors.includes(index);
+                  const isMatching = isMatch(item);
+                  const isEditingChinese = editingCell?.row === index && editingCell?.column === 'chinese';
+                  const isEditingEnglish = editingCell?.row === index && editingCell?.column === 'english';
+                  
+                  return (
+                    <tr 
+                      key={item.id} 
+                      className={`table-row ${hasError ? 'table-row-error' : ''} ${isMatching ? 'table-row-match' : ''}`}
+                    >
+                      <td className={`table-cell ${hasError ? 'table-cell-error' : ''} ${isMatching ? 'font-bold' : ''}`}>
+                        {index + 1}
+                      </td>
+                      <td className={`table-cell ${hasError && !item.chinese.trim() ? 'table-cell-error' : ''}`}>
+                        <textarea
+                          value={item.chinese}
+                          onChange={(e) => handleEdit(index, 'chinese', e.target.value)}
+                          onFocus={() => setEditingCell({ row: index, column: 'chinese' })}
+                          onBlur={() => setEditingCell(null)}
+                          className={`alignment-cell ${isEditingChinese ? 'alignment-cell-focus' : ''}`}
+                          placeholder="Chinese text..."
+                        />
+                      </td>
+                      <td className={`table-cell ${hasError && !item.english.trim() ? 'table-cell-error' : ''}`}>
+                        <textarea
+                          value={item.english}
+                          onChange={(e) => handleEdit(index, 'english', e.target.value)}
+                          onFocus={() => setEditingCell({ row: index, column: 'english' })}
+                          onBlur={() => setEditingCell(null)}
+                          className={`alignment-cell ${isEditingEnglish ? 'alignment-cell-focus' : ''}`}
+                          placeholder="English text..."
+                        />
+                      </td>
+                      <td className="table-cell">
+                        <div className="flex flex-wrap gap-1">
+                          <button
+                            onClick={() => handleAddRowAbove(index)}
+                            className="action-btn action-btn-gray"
+                            title="Add row above"
+                          >
+                            ↑+
+                          </button>
+                          <button
+                            onClick={() => handleAddRowBelow(index)}
+                            className="action-btn action-btn-gray"
+                            title="Add row below"
+                          >
+                            ↓+
+                          </button>
+                          <button
+                            onClick={() => handleDeleteRow(index)}
+                            className="action-btn action-btn-danger"
+                            title="Delete row"
+                          >
+                            ✕
+                          </button>
+                          <button
+                            onClick={() => handleMoveUp(index)}
+                            disabled={index === 0}
+                            className={`action-btn ${index === 0 ? 'action-btn-disabled' : 'action-btn-blue'}`}
+                            title="Move up"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            onClick={() => handleMoveDown(index)}
+                            disabled={index === data.length - 1}
+                            className={`action-btn ${index === data.length - 1 ? 'action-btn-disabled' : 'action-btn-blue'}`}
+                            title="Move down"
+                          >
+                            ↓
+                          </button>
+                          <button
+                            onClick={() => handleMergeWithPrevious(index)}
+                            disabled={index === 0}
+                            className={`action-btn ${index === 0 ? 'action-btn-disabled' : 'action-btn-purple'}`}
+                            title="Merge entire row with previous"
+                          >
+                            Row ↑
+                          </button>
+                          <button
+                            onClick={() => handleMergeWithNext(index)}
+                            disabled={index === data.length - 1}
+                            className={`action-btn ${index === data.length - 1 ? 'action-btn-disabled' : 'action-btn-purple'}`}
+                            title="Merge entire row with next"
+                          >
+                            Row ↓
+                          </button>
+                          <button
+                            onClick={() => handleMergeChineseUp(index)}
+                            disabled={index === 0}
+                            className={`action-btn ${index === 0 ? 'action-btn-disabled' : 'action-btn-cyan'}`}
+                            title="Merge Chinese Up"
+                          >
+                            C↑
+                          </button>
+                          <button
+                            onClick={() => handleMergeChineseDown(index)}
+                            disabled={index === data.length - 1}
+                            className={`action-btn ${index === data.length - 1 ? 'action-btn-disabled' : 'action-btn-cyan'}`}
+                            title="Merge Chinese Down"
+                          >
+                            C↓
+                          </button>
+                          <button
+                            onClick={() => handleMergeEnglishUp(index)}
+                            disabled={index === 0}
+                            className={`action-btn ${index === 0 ? 'action-btn-disabled' : 'action-btn-amber'}`}
+                            title="Merge English Up"
+                          >
+                            E↑
+                          </button>
+                          <button
+                            onClick={() => handleMergeEnglishDown(index)}
+                            disabled={index === data.length - 1}
+                            className={`action-btn ${index === data.length - 1 ? 'action-btn-disabled' : 'action-btn-amber'}`}
+                            title="Merge English Down"
+                          >
+                            E↓
+                          </button>
+                          <button
+                            onClick={() => handleSplitChinese(index)}
+                            className="action-btn action-btn-green"
+                            title="Split Chinese"
+                          >
+                            Split C
+                          </button>
+                          <button
+                            onClick={() => handleSplitEnglish(index)}
+                            className="action-btn action-btn-green"
+                            title="Split English"
+                          >
+                            Split E
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
